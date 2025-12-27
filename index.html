@@ -1,259 +1,283 @@
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Офлайн-Карти (Auto-Offline)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Офлайн-Карти</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+        :root {
+            --bg-color: #2c3e50;
+            --accent-color: #3498db;
+            --text-color: #ecf0f1;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+            --warning-color: #f1c40f;
+            --toolbar-height: 60px;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; 
+            background: #e5e3df;
+            overflow: hidden;
+        }
         
-        /* UI CONTROLS */
+        /* MODERN TOOLBAR */
         #controls { 
-            padding: 15px; background: #222; color: white; 
-            display: flex; gap: 15px; align-items: center; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3); z-index: 2000;
-            flex-wrap: wrap; 
+            height: var(--toolbar-height);
+            background: var(--bg-color); 
+            display: flex; 
+            align-items: center; 
+            padding: 0 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3); 
+            z-index: 2000;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            gap: 10px;
+            scrollbar-width: none;
         }
-        .group { display: flex; align-items: center; gap: 8px; border-right: 1px solid #555; padding-right: 15px; position: relative; }
-        .group:last-child { border-right: none; }
-        
-        h1 { font-size: 18px; margin: 0; color: #fff; }
-        
-        button { 
-            padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 4px; border: none; 
-            transition: background 0.2s;
+        #controls::-webkit-scrollbar { display: none; }
+
+        .group { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            padding-right: 12px; 
+            border-right: 1px solid #4a5f70;
+            height: 40px;
         }
-        #btn-download { background: #007bff; color: white; }
-        #btn-download:hover { background: #0056b3; }
-        #btn-download:disabled { background: #555; cursor: not-allowed; }
-
-        #btn-loc { background: #17a2b8; color: white; }
-        #btn-loc:hover { background: #138496; }
+        .group:last-child { border-right: none; margin-left: auto; }
         
-        #btn-img-upload { background: #6f42c1; color: white; }
-        #btn-img-upload:hover { background: #59359a; }
-        
-        #btn-img-close { background: #e83e8c; color: white; display: none; }
-        #btn-img-close:hover { background: #d63384; }
+        h1 { 
+            font-size: 20px; margin: 0; color: #fff; margin-right: 5px; 
+            display: flex; align-items: center;
+        }
 
-        #btn-clear { background: #dc3545; color: white; font-size: 12px; padding: 5px 10px;}
+        /* BUTTONS */
+        button, .file-btn-label { 
+            height: 36px;
+            min-width: 36px;
+            padding: 0 10px; 
+            cursor: pointer; 
+            border-radius: 6px; 
+            border: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            color: white;
+            font-weight: 500;
+        }
+        button:active { transform: translateY(1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
 
-        /* ROUTE BUTTON */
-        #btn-route { background: #fd7e14; color: white; }
-        #btn-route:hover { background: #e36a09; }
-        .routing-active { outline: 3px solid white; box-shadow: 0 0 10px #fd7e14; }
+        #btn-download { background: var(--accent-color); }
+        #btn-save-file { background: #7f8c8d; display: none; }
+        #btn-loc { background: #1abc9c; }
+        #btn-img-upload { background: #9b59b6; }
+        #btn-img-close { background: var(--danger-color); display: none; }
+        #btn-route { background: #e67e22; }
+        #btn-search { background: var(--warning-color); color: #333; border-radius: 0 6px 6px 0; }
+        #btn-clear { background: var(--danger-color); font-size: 14px;}
+        #btn-import { background: var(--success-color); }
 
-        /* SEARCH STYLES */
-        #search-input { padding: 8px; border-radius: 4px; border: none; width: 220px; }
-        #btn-search { background: #ffc107; color: #222; }
-        #btn-search:hover { background: #e0a800; }
+        .routing-active { 
+            background: white !important; 
+            color: #e67e22 !important; 
+            border: 2px solid #e67e22 !important; 
+            box-shadow: 0 0 8px #e67e22 inset;
+        }
 
-        /* AUTOCOMPLETE DROPDOWN */
+        /* SEARCH INPUT */
+        .search-wrapper { position: relative; display: flex; align-items: center; }
+        #search-input { 
+            height: 36px; 
+            padding: 0 10px; 
+            border-radius: 6px 0 0 6px; 
+            border: none; 
+            width: 140px; 
+            outline: none;
+            background: #fff;
+            color: #333;
+            transition: width 0.3s;
+        }
+        #search-input:focus { width: 180px; }
+
         #search-suggestions {
             position: absolute;
-            top: 100%; left: 0; width: 100%;
+            top: 40px; left: 0; width: 220px;
             background: white;
-            border-radius: 0 0 4px 4px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             z-index: 3000;
-            max-height: 300px;
+            max-height: 60vh;
             overflow-y: auto;
             display: none;
+            text-align: left;
+            white-space: normal;
         }
-        .suggestion-item {
-            padding: 8px 12px;
+        .suggestion-item { padding: 10px; border-bottom: 1px solid #eee; color: #333; cursor: pointer; font-size: 13px; line-height: 1.4; }
+        .suggestion-item:hover { background: #f1f2f6; }
+
+        /* TOGGLE SWITCH */
+        .toggle-wrapper { position: relative; display: flex; align-items: center; }
+        .toggle-checkbox { display: none; }
+        .toggle-btn {
+            background: #27ae60;
+            color: white;
+            padding: 0 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
             cursor: pointer;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            font-size: 13px;
+            transition: 0.3s;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+            white-space: nowrap;
         }
-        .suggestion-item:last-child { border-bottom: none; }
-        .suggestion-item:hover { background-color: #f0f0f0; }
-        
-        /* SWITCH TOGGLE */
-        .switch-container { display: flex; align-items: center; gap: 10px; background: #444; padding: 5px 10px; border-radius: 20px; }
-        .switch-label { font-size: 14px; font-weight: bold; }
-        .toggle-checkbox { height: 0; width: 0; visibility: hidden; position: absolute; }
-        .toggle-label {
-            cursor: pointer; text-indent: -9999px; width: 40px; height: 20px; background: grey; display: block;
-            border-radius: 100px; position: relative;
-        }
-        .toggle-label:after {
-            content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 90px; transition: 0.3s;
-        }
-        .toggle-checkbox:checked + .toggle-label { background: #28a745; }
-        .toggle-checkbox:checked + .toggle-label:after { left: calc(100% - 2px); transform: translateX(-100%); }
+        .toggle-checkbox:checked + .toggle-btn { background: #c0392b; }
+        .status-icon::before { content: '🌐'; }
+        .toggle-checkbox:checked + .toggle-btn .status-icon::before { content: '📵'; }
 
         /* STATUS BAR */
-        #status-bar { background: #f8f9fa; border-bottom: 1px solid #ddd; padding: 5px 15px; font-size: 12px; color: #333; font-family: monospace; }
+        #status-bar { 
+            position: absolute; 
+            bottom: 25px; left: 50%; 
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75); 
+            color: white; 
+            padding: 6px 15px; 
+            border-radius: 20px;
+            font-size: 11px; 
+            font-family: monospace; 
+            z-index: 1000;
+            pointer-events: none;
+            white-space: nowrap;
+            backdrop-filter: blur(2px);
+            transition: opacity 0.5s;
+        }
 
-        /* MAP AREA */
-        #map { flex-grow: 1; background: #e5e3df; cursor: crosshair; }
+        #map { flex-grow: 1; background: #e5e3df; cursor: crosshair; width: 100%; z-index: 1; }
+        
+        /* If custom image is loaded, background should be dark to focus on image */
+        body.custom-mode #map { background: #111; }
+        .cached-tile { outline: 1px solid rgba(46, 204, 113, 0.3); filter: sepia(0.15); }
 
-        /* TILE STYLES */
-        .cached-tile {
-            outline: 2px solid rgba(40, 167, 69, 0.6);
-            outline-offset: -2px;
-            filter: sepia(0.2) hue-rotate(80deg);
+        @media (max-width: 600px) {
+            #search-input { width: 100px; }
+            #search-input:focus { width: 140px; }
+            h1 span { display: none; }
+            .group { padding-right: 8px; gap: 5px; }
+            button { padding: 0 8px; }
         }
     </style>
 </head>
 <body>
 
-<!-- CONTROLS -->
 <div id="controls">
-    <div class="group">
-        <h1>Офлайн-Карта</h1>
+    <div class="group" style="border:none; padding-right:5px;">
+        <h1 title="Офлайн-мапи">🗺️<span>Мапа</span></h1>
     </div>
 
-    <!-- MODE SWITCH -->
     <div class="group">
-        <div class="switch-container">
-            <span class="switch-label">ОНЛАЙН</span>
+        <div class="toggle-wrapper">
             <input type="checkbox" id="mode-toggle" class="toggle-checkbox" onchange="toggleMode()">
-            <label for="mode-toggle" class="toggle-label">Toggle</label>
-            <span class="switch-label">ТІЛЬКИ ОФЛАЙН</span>
+            <label for="mode-toggle" class="toggle-btn" title="Перемикач Онлайн/Офлайн">
+                <span class="status-icon"></span>
+                <span id="mode-text">Авто</span>
+            </label>
         </div>
     </div>
 
-    <!-- SEARCH FIELD -->
     <div class="group">
-        <input type="text" id="search-input" placeholder="Пошук (вулиця, місце)..." 
-               oninput="handleSearchInput(this)" 
-               onkeypress="handleSearchEnter(event)"
-               autocomplete="off">
-        <button id="btn-search" onclick="doSearch()">🔍</button>
-        <div id="search-suggestions"></div>
+        <div class="search-wrapper">
+            <input type="text" id="search-input" placeholder="Пошук..." 
+                   oninput="handleSearchInput(this)" 
+                   onkeypress="handleSearchEnter(event)"
+                   autocomplete="off">
+            <button id="btn-search" onclick="doSearch()" title="Пошук">🔍</button>
+            <div id="search-suggestions"></div>
+        </div>
     </div>
 
-    <!-- ROUTING & IMG -->
     <div class="group">
-        <button id="btn-route" onclick="toggleRouteMode()">🔗 Маршрут</button>
-        
-        <!-- Image Map -->
+        <button id="btn-loc" onclick="checkLocation()" title="Моя локація">🎯</button>
+        <button id="btn-route" onclick="toggleRouteMode()" title="Створити маршрут">🛣️</button>
+    </div>
+
+    <div class="group">
         <input type="file" id="img-input" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
-        <button id="btn-img-upload" onclick="document.getElementById('img-input').click()">🖼️ Фото</button>
-        <button id="btn-img-close" onclick="closeImageMap()">✕</button>
+        <button id="btn-img-upload" onclick="document.getElementById('img-input').click()" title="Завантажити фото-мапу">🖼️</button>
+        <button id="btn-img-close" onclick="closeImageMap()" title="Закрити фото-мапу">✕</button>
     </div>
 
-    <!-- ACTIONS -->
     <div class="group">
-        <button id="btn-loc" onclick="checkLocation()">📍 Я тут</button>
-        <button id="btn-download" onclick="startDownload()">⬇️ Зона</button>
+        <button id="btn-download" onclick="startDownload()" title="Завантажити область">📥</button>
+        <button id="btn-save-file" onclick="exportLastDownload()" title="Зберегти .mapzip">💾</button>
     </div>
 
-    <div class="group" style="margin-left: auto;">
-        <button id="btn-clear" onclick="clearData()">🗑️ Очистити</button>
+    <div class="group" style="margin-left: auto; border:none; padding-right:0;">
+        <input type="file" id="zip-input" accept=".mapzip,.zip" style="display: none;" onchange="importMapArchive(this)">
+        <button id="btn-import" onclick="document.getElementById('zip-input').click()" title="Імпорт">📂</button>
+        <button id="btn-clear" onclick="clearData()" title="Очистити">🗑️</button>
     </div>
 </div>
 
-<div id="status-bar">Запуск системи...</div>
 <div id="map"></div>
+<div id="status-bar">Система готова</div>
 
-<!-- ======================================================= -->
-<!-- LOGIC START -->
-<!-- ======================================================= -->
 <script>
-    // --- CONFIGURATION ---
     const CDN_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     const CDN_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    const CDN_JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
     
-    // Global State
-    let map = null;
-    let db = null;
-    let isOfflineOnly = false;
-    let tileLayer = null;
-    let searchDebounce = null;
-    
-    // Auto-Offline State
-    let noConnectionStart = 0; // Timestamp when connection was first lost
-    
-    // Custom Image Tiling State
-    let customMapImage = null;
-    let customMapBounds = null;
-    let isCustomImageMode = false;
+    let map = null, db = null, isOfflineOnly = false, tileLayer = null, searchDebounce = null;
+    let noConnectionStart = 0, customMapImage = null, customMapBounds = null, isCustomImageMode = false;
+    let isRoutingMode = false, routePoints = [], routeLayer = null, routeMarkers = [];
+    let lastDownloadedBounds = null; 
 
-    // Routing State
-    let isRoutingMode = false;
-    let routePoints = []; 
-    let routeLayer = null; 
-    let routeMarkers = [];
-
-    // --- 1. BOOTSTRAPPER ---
     async function boot() {
-        updateStatus("Перевірка кешу бібліотек...");
-        let css = localStorage.getItem('lib_css');
-        let js = localStorage.getItem('lib_js');
-
-        if (!css || !js) {
-            updateStatus("Завантаження бібліотек (Потрібен Інтернет)...");
+        updateStatus("Перевірка бібліотек...");
+        let css = localStorage.getItem('lib_css'), js = localStorage.getItem('lib_js'), jszip = localStorage.getItem('lib_jszip');
+        if (!css || !js || !jszip) {
+            updateStatus("Завантаження...");
             try {
-                const [cssRes, jsRes] = await Promise.all([fetch(CDN_CSS), fetch(CDN_JS)]);
-                css = await cssRes.text();
-                js = await jsRes.text();
-                localStorage.setItem('lib_css', css);
-                localStorage.setItem('lib_js', js);
-            } catch (e) {
-                updateStatus("ПОМИЛКА: Не вдалося завантажити бібліотеки.");
-                return;
-            }
+                const [cssRes, jsRes, zipRes] = await Promise.all([fetch(CDN_CSS), fetch(CDN_JS), fetch(CDN_JSZIP)]);
+                css = await cssRes.text(); js = await jsRes.text(); jszip = await zipRes.text();
+                localStorage.setItem('lib_css', css); localStorage.setItem('lib_js', js); localStorage.setItem('lib_jszip', jszip);
+            } catch (e) { updateStatus("Помилка завантаження бібліотек."); return; }
         }
-
-        const styleTag = document.createElement('style');
-        styleTag.textContent = css;
-        document.head.appendChild(styleTag);
-
-        const scriptTag = document.createElement('script');
-        scriptTag.textContent = js;
-        document.body.appendChild(scriptTag);
-
+        const styleTag = document.createElement('style'); styleTag.textContent = css; document.head.appendChild(styleTag);
+        const zipTag = document.createElement('script'); zipTag.textContent = jszip; document.body.appendChild(zipTag);
+        const scriptTag = document.createElement('script'); scriptTag.textContent = js; document.body.appendChild(scriptTag);
         setTimeout(initApp, 200);
-        
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('#search-suggestions') && e.target.id !== 'search-input') {
-                document.getElementById('search-suggestions').style.display = 'none';
-            }
-        });
-        
-        // Start the auto-offline monitor
+        document.addEventListener('click', e => { if (!e.target.closest('#search-suggestions') && e.target.id !== 'search-input') document.getElementById('search-suggestions').style.display = 'none'; });
         initAutoOfflineProtection();
     }
 
-    // --- 2. INIT APP ---
     function initApp() {
-        if (typeof L === 'undefined') return setTimeout(initApp, 100);
-        
-        updateStatus("Відкриття бази даних...");
-        
+        if (typeof L === 'undefined' || typeof JSZip === 'undefined') return setTimeout(initApp, 100);
         const request = indexedDB.open("StrictOfflineDB", 14);
-        
-        request.onupgradeneeded = (e) => {
+        request.onupgradeneeded = e => {
             db = e.target.result;
-            if (!db.objectStoreNames.contains("tiles")) {
-                db.createObjectStore("tiles", { keyPath: "key" });
-            }
-            if (!db.objectStoreNames.contains("search_cache")) {
-                db.createObjectStore("search_cache", { keyPath: "query" });
-            }
-            if (!db.objectStoreNames.contains("routes_cache")) {
-                db.createObjectStore("routes_cache", { keyPath: "key" });
-            }
+            if (!db.objectStoreNames.contains("tiles")) db.createObjectStore("tiles", { keyPath: "key" });
+            if (!db.objectStoreNames.contains("search_cache")) db.createObjectStore("search_cache", { keyPath: "query" });
+            if (!db.objectStoreNames.contains("routes_cache")) db.createObjectStore("routes_cache", { keyPath: "key" });
         };
-
-        request.onsuccess = (e) => {
-            db = e.target.result;
-            updateStatus("Готово. Онлайн.");
-            initMap();
-        };
-
-        request.onerror = (e) => updateStatus("Помилка БД: " + e.target.error);
+        request.onsuccess = e => { db = e.target.result; updateStatus("Готово. Онлайн."); initMap(); };
     }
 
     function initMap() {
-        map = L.map('map').setView([50.4501, 30.5234], 13);
+        map = L.map('map', { zoomControl: false }).setView([50.4501, 30.5234], 13);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
         map.on('click', onMapClick);
-
+        
         L.TileLayer.Smart = L.TileLayer.extend({
             createTile: function(coords, done) {
                 const tile = document.createElement('img');
@@ -262,520 +286,391 @@
                 L.DomEvent.on(tile, 'load', L.Util.bind(this._tileOnLoad, this, done, tile));
                 L.DomEvent.on(tile, 'error', L.Util.bind(this._tileOnError, this, done, tile));
 
-                if (this.options.crossOrigin) tile.crossOrigin = '';
-                tile.alt = '';
-                tile.setAttribute('role', 'presentation');
-
+                // 1. CUSTOM IMAGE MODE (High Priority)
                 if (isCustomImageMode && customMapImage && customMapBounds) {
-                    const tileUrl = getTileFromCustomImage(coords);
-                    if (tileUrl) {
-                        tile.src = tileUrl;
-                        tile.classList.add('cached-tile'); 
+                    const canvasUrl = getTileFromCustomImage(coords);
+                    if (canvasUrl) {
+                        tile.src = canvasUrl;
+                        return tile;
+                    } else {
+                        // Empty tile if outside image bounds in custom mode
+                        tile.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                         return tile;
                     }
                 }
 
+                // 2. STANDARD DB/ONLINE MODE
                 const tx = db.transaction("tiles", "readonly");
-                const store = tx.objectStore("tiles");
-                const req = store.get(key);
-
-                req.onsuccess = (e) => {
-                    const result = e.target.result;
-                    if (result && result.blob) {
-                        tile.src = URL.createObjectURL(result.blob);
+                tx.objectStore("tiles").get(key).onsuccess = e => {
+                    if (e.target.result?.blob) { 
+                        tile.src = URL.createObjectURL(e.target.result.blob); 
                         tile.classList.add('cached-tile'); 
+                    } else if (isOfflineOnly) {
+                        tile.src = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#222"/><text x="128" y="128" font-family="sans-serif" font-size="20" fill="#555" text-anchor="middle">ОФЛАЙН</text></svg>');
                     } else {
-                        if (isOfflineOnly) {
-                            tile.src = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#f0f0f0"/><text x="128" y="128" font-family="Arial" font-size="20" fill="#999" text-anchor="middle">OFFLINE</text></svg>');
-                        } else {
-                            tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
-                        }
+                        tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
                     }
                 };
-                req.onerror = () => { if(!isOfflineOnly) tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`; };
                 return tile;
             }
         });
-
         tileLayer = new L.TileLayer.Smart(null, { maxZoom: 18 }).addTo(map);
     }
 
-    // --- AUTO OFFLINE MONITOR ---
+    // --- CUSTOM IMAGE TILING LOGIC ---
+    function getTileFromCustomImage(coords) {
+        // Calculate the LatLng bounds of the requested tile
+        const tileNw = map.unproject(L.point(coords.x * 256, coords.y * 256), coords.z);
+        const tileSe = map.unproject(L.point((coords.x + 1) * 256, (coords.y + 1) * 256), coords.z);
+        const tileBounds = L.latLngBounds(tileNw, tileSe);
+
+        // Check if this tile intersects with the custom image
+        if (!customMapBounds.intersects(tileBounds)) return null;
+
+        // Create a canvas to draw the slice
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; 
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        // Logic: Map the CustomImage bounds to Pixel coordinates at the *current* zoom level
+        const mapZoom = coords.z;
+        
+        // Pixel coordinates of the Custom Image's Top-Left and Bottom-Right at this zoom
+        const imgNwPt = map.project(customMapBounds.getNorthWest(), mapZoom);
+        const imgSePt = map.project(customMapBounds.getSouthEast(), mapZoom);
+        
+        // Size of the custom image in "map pixels" at this zoom level
+        const imgW = imgSePt.x - imgNwPt.x;
+        const imgH = imgSePt.y - imgNwPt.y;
+
+        // Pixel coordinates of the requested Tile's Top-Left
+        const tileNwPt = L.point(coords.x * 256, coords.y * 256);
+
+        // Calculate offset: where is the image Top-Left relative to the Tile Top-Left?
+        const offsetX = imgNwPt.x - tileNwPt.x;
+        const offsetY = imgNwPt.y - tileNwPt.y;
+
+        // Draw!
+        ctx.drawImage(customMapImage, offsetX, offsetY, imgW, imgH);
+
+        return canvas.toDataURL();
+    }
+
+    function handleImageUpload(i) { 
+        if (i.files?.[0]) { 
+            const r = new FileReader(); 
+            r.onload = e => { 
+                const img = new Image(); 
+                img.onload = () => { 
+                    customMapImage = img; 
+                    
+                    // Calculate bounds to preserve aspect ratio within current view
+                    const c = map.getCenter();
+                    const z = map.getZoom();
+                    const viewSize = map.getSize(); // Pixels on screen
+                    
+                    // Scale image to fit 90% of screen
+                    const scaleFactor = Math.min(viewSize.x / img.naturalWidth, viewSize.y / img.naturalHeight) * 0.9;
+                    
+                    // Calculate dimensions in map pixels
+                    const scaledW = img.naturalWidth * scaleFactor;
+                    const scaledH = img.naturalHeight * scaleFactor;
+                    
+                    // Center point in pixel coords
+                    const centerPt = map.project(c, z);
+                    
+                    // Calculate corners
+                    const nwPt = L.point(centerPt.x - scaledW/2, centerPt.y - scaledH/2);
+                    const sePt = L.point(centerPt.x + scaledW/2, centerPt.y + scaledH/2);
+                    
+                    customMapBounds = L.latLngBounds(
+                        map.unproject(nwPt, z),
+                        map.unproject(sePt, z)
+                    );
+
+                    isCustomImageMode = true; 
+                    
+                    // --- CLEAN ROUTE OVERLAYS ---
+                    // Since custom image covers the map, old routes are irrelevant.
+                    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+                    routeMarkers.forEach(m => map.removeLayer(m));
+                    routeMarkers = [];
+                    routePoints = [];
+                    if (isRoutingMode) {
+                        isRoutingMode = false;
+                        document.getElementById('btn-route').classList.remove('routing-active');
+                    }
+                    // ---------------------------
+
+                    // UI Updates
+                    document.getElementById('btn-img-upload').style.display = 'none'; 
+                    document.getElementById('btn-img-close').style.display = 'flex'; 
+                    document.body.classList.add('custom-mode');
+                    
+                    // Force Offline Switch (Visual & Logic)
+                    document.getElementById('mode-toggle').checked = true;
+                    document.getElementById('mode-text').innerText = "Фото";
+                    isOfflineOnly = true;
+
+                    updateStatus("Фото-мапу завантажено");
+                    
+                    // Fit map to image
+                    map.fitBounds(customMapBounds);
+                    tileLayer.redraw(); 
+                }; 
+                img.src = e.target.result; 
+            }; 
+            r.readAsDataURL(i.files[0]); 
+        } 
+    }
+
+    function closeImageMap() { 
+        isCustomImageMode = false; 
+        customMapImage = null;
+        document.getElementById('btn-img-upload').style.display = 'flex'; 
+        document.getElementById('btn-img-close').style.display = 'none'; 
+        document.body.classList.remove('custom-mode');
+        
+        // Reset Toggle Text (Keep it checked/offline if user wants, but reset text)
+        document.getElementById('mode-text').innerText = "Офлайн";
+        
+        updateStatus("Звичайну мапу відновлено");
+        tileLayer.redraw(); 
+    }
+    // --- END CUSTOM IMAGE LOGIC ---
+
     function initAutoOfflineProtection() {
-        // Check connection every 5 seconds
         setInterval(async () => {
-            // If already in offline mode, do nothing
-            if (isOfflineOnly) {
-                noConnectionStart = 0;
-                return;
-            }
-
-            // Perform a robust connectivity check
+            if (isOfflineOnly) { noConnectionStart = 0; return; }
             let isConnected = navigator.onLine;
-
             if (isConnected) {
                 try {
-                    // Try to fetch a tiny resource (OSM tile) with a short timeout to confirm real internet
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
-                    
-                    // We use cache: 'no-store' to ensure we test the network, not the disk cache
-                    await fetch('https://tile.openstreetmap.org/0/0/0.png', { 
-                        method: 'HEAD', 
-                        signal: controller.signal,
-                        cache: 'no-store'
-                    });
-                    clearTimeout(timeoutId);
-                } catch (e) {
-                    isConnected = false;
-                }
+                    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 2000);
+                    await fetch('https://tile.openstreetmap.org/0/0/0.png', { method: 'HEAD', signal: ctrl.signal, cache: 'no-store' });
+                } catch (e) { isConnected = false; }
             }
-
             if (!isConnected) {
-                if (noConnectionStart === 0) {
-                    noConnectionStart = Date.now();
-                    console.log("Connection lost. Timer started.");
-                } else {
-                    const downtime = Date.now() - noConnectionStart;
-                    const remaining = Math.ceil((15000 - downtime) / 1000);
-                    
-                    if (downtime > 15000) { // 30 seconds
-                        updateStatus("⚠️ Зв'язок втрачено на 15 секунд. Увімкнено режим оффлайн!");
-                        const checkbox = document.getElementById('mode-toggle');
-                        checkbox.checked = true;
-                        toggleMode(); // Switch to offline
-                        noConnectionStart = 0; // Reset
-                        alert("⚠️ Інтернет відсутній більше 15 секунд. Увімкнено режим оффлайн!");
-                    } else if (downtime > 5000) {
-                        // Warn in console or status bar
-                        console.log(`Connection unstable. Switching to offline in ${remaining}s`);
-                    }
+                if (noConnectionStart === 0) noConnectionStart = Date.now();
+                else if (Date.now() - noConnectionStart > 15000) {
+                    document.getElementById('mode-toggle').checked = true; toggleMode(); noConnectionStart = 0;
+                    alert("Інтернет відсутній >15с. Перехід в офлайн.");
                 }
-            } else {
-                // Connection is good
-                if (noConnectionStart !== 0) {
-                    console.log("Connection restored.");
-                    noConnectionStart = 0;
-                }
-            }
+            } else noConnectionStart = 0;
         }, 5000);
     }
 
-    // --- LEVENSHTEIN DISTANCE ---
-    function levenshtein(a, b) {
-        const matrix = [];
-        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-        for (let i = 1; i <= b.length; i++) {
-            for (let j = 1; j <= a.length; j++) {
-                if (b.charAt(i - 1) == a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
-                else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
-            }
+    async function startDownload() {
+        const btn = document.getElementById('btn-download'), b = map.getBounds();
+        document.getElementById('btn-save-file').style.display = 'none';
+        let queue = [];
+        for (let z = 0; z <= 18; z++) {
+             const y1 = lat2tile(b.getNorth(), z), y2 = lat2tile(b.getSouth(), z), x1 = long2tile(b.getWest(), z), x2 = long2tile(b.getEast(), z);
+             for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) queue.push({z, x, y});
         }
-        return matrix[b.length][a.length];
+        const total = queue.length;
+        let asArchive = false;
+        if (total > 5000) { if (!confirm(`Зона містить ${total} тайлів. Завантажити як архів (.mapzip)?`)) return; asArchive = true; }
+        
+        btn.disabled = true;
+        const metadataCount = await downloadPlacesMetadata(b);
+        const zip = asArchive ? new JSZip() : null;
+        let saved = 0; const startTime = Date.now();
+
+        for (let i = 0; i < total; i++) {
+            const item = queue[i], elapsed = Date.now() - startTime;
+            const timeStr = i > 5 ? `~${Math.ceil(((elapsed/(i+1))*(total-i))/60000)} хв` : "...";
+            updateStatus(`Завантаження ${i+1}/${total} (${timeStr})...`);
+            try {
+                const r = await fetch(`https://tile.openstreetmap.org/${item.z}/${item.x}/${item.y}.png`);
+                if(r.ok) {
+                    const blob = await r.blob(), key = `${item.z}_${item.x}_${item.y}`;
+                    if (asArchive) zip.file(`${key}.png`, blob);
+                    else await db.transaction("tiles", "readwrite").objectStore("tiles").put({ key, blob });
+                    saved++;
+                }
+            } catch(e) {}
+            if (i % 25 === 0) await new Promise(r => setTimeout(r, 10));
+        }
+
+        if (asArchive) {
+            updateStatus("Архівація...");
+            const searchData = await getSearchDataInBounds(b);
+            zip.file("metadata.json", JSON.stringify(searchData));
+            const content = await zip.generateAsync({type:"blob"});
+            saveBlob(content, `map_${Date.now()}.mapzip`);
+            updateStatus("Архів завантажено.");
+        } else {
+            lastDownloadedBounds = b;
+            document.getElementById('btn-save-file').style.display = 'flex';
+            updateStatus(`Готово! ${saved} тайлів збережено.`);
+        }
+        btn.disabled = false; tileLayer.redraw();
     }
 
-    // --- SEARCH & AUTOCOMPLETE (PRIORITIZED) ---
+    async function exportLastDownload() {
+        if (!lastDownloadedBounds) return;
+        updateStatus("Експорт...");
+        const zip = new JSZip(), b = lastDownloadedBounds;
+        const tx = db.transaction("tiles", "readonly"), store = tx.objectStore("tiles");
+        let count = 0;
+        for (let z = 0; z <= 18; z++) {
+            const y1 = lat2tile(b.getNorth(), z), y2 = lat2tile(b.getSouth(), z), x1 = long2tile(b.getWest(), z), x2 = long2tile(b.getEast(), z);
+            for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) {
+                const key = `${z}_${x}_${y}`;
+                const res = await new Promise(r => { store.get(key).onsuccess = e => r(e.target.result); });
+                if (res?.blob) { zip.file(`${key}.png`, res.blob); count++; }
+            }
+        }
+        const searchData = await getSearchDataInBounds(b);
+        zip.file("metadata.json", JSON.stringify(searchData));
+        const content = await zip.generateAsync({type:"blob"});
+        saveBlob(content, `export_${count}_tiles.mapzip`);
+        updateStatus("Експортовано!");
+    }
+
+    async function importMapArchive(input) {
+        if (!input.files?.[0]) return;
+        updateStatus("Імпорт...");
+        try {
+            const zip = await JSZip.loadAsync(input.files[0]);
+            let count = 0;
+            for (const filename of Object.keys(zip.files)) {
+                if (filename.endsWith(".png")) {
+                    const blob = await zip.files[filename].async("blob");
+                    await db.transaction("tiles", "readwrite").objectStore("tiles").put({ key: filename.replace(".png", ""), blob });
+                    count++;
+                } else if (filename === "metadata.json") {
+                    const data = JSON.parse(await zip.files[filename].async("string"));
+                    const tx = db.transaction("search_cache", "readwrite");
+                    data.forEach(item => tx.objectStore("search_cache").put(item));
+                }
+                if (count % 100 === 0) updateStatus(`Імпорт: ${count}...`);
+            }
+            alert(`Імпортовано ${count} тайлів.`); tileLayer.redraw();
+        } catch (e) { alert("Помилка імпорту"); }
+        input.value = "";
+    }
+
+    async function getSearchDataInBounds(bounds) {
+        return new Promise(res => {
+            db.transaction("search_cache", "readonly").objectStore("search_cache").getAll().onsuccess = e => {
+                res(e.target.result.filter(i => bounds.contains([i.lat, i.lon])));
+            };
+        });
+    }
+
+    async function downloadPlacesMetadata(bounds) {
+        const q = `[out:json][timeout:60];(nwr["name"](${bounds.getSouth()-0.01},${bounds.getWest()-0.01},${bounds.getNorth()+0.01},${bounds.getEast()+0.01}););out center;`;
+        try {
+            const r = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
+            const d = await r.json();
+            const tx = db.transaction("search_cache", "readwrite");
+            d.elements.forEach(el => {
+                const lat = el.lat || el.center?.lat, lon = el.lon || el.center?.lon;
+                if (lat && el.tags?.name) tx.objectStore("search_cache").put({ query: el.tags.name.toLowerCase(), lat, lon, display_name: el.tags.name + " (Офлайн)" });
+            });
+            return d.elements.length;
+        } catch(e) { return 0; }
+    }
+
     function handleSearchInput(input) {
         const val = input.value.trim().toLowerCase();
-        const list = document.getElementById('search-suggestions');
-        
+        if(val.length < 2) { document.getElementById('search-suggestions').style.display = 'none'; return; }
         clearTimeout(searchDebounce);
-        
-        if(val.length < 2) {
-            list.style.display = 'none';
-            return;
-        }
-
         searchDebounce = setTimeout(() => {
-            const tx = db.transaction("search_cache", "readonly");
-            const store = tx.objectStore("search_cache");
-            const req = store.getAll();
-
-            req.onsuccess = (e) => {
-                const allItems = e.target.result;
-                
-                // Scoring
-                const scored = allItems.map(item => {
-                    const text = item.query; 
-                    let score = 0;
-                    
-                    if (text.startsWith(val)) score = 100;
-                    else if (text.includes(" " + val)) score = 80;
-                    else if (text.includes(val)) score = 60;
-                    else {
-                        if (val.length > 3) {
-                            const dist = levenshtein(text, val);
-                            if (dist <= 2) score = 30 - dist; 
-                        }
-                    }
-
-                    if (score > 0) score -= (text.length - val.length) * 0.05; // Penalize length
-                    return { item, score };
+            db.transaction("search_cache", "readonly").objectStore("search_cache").getAll().onsuccess = e => {
+                const matches = e.target.result.filter(x => x.query.includes(val)).slice(0, 10);
+                const list = document.getElementById('search-suggestions');
+                list.innerHTML = '';
+                if (!matches.length) { list.style.display = 'none'; return; }
+                matches.forEach(item => {
+                    const div = document.createElement('div'); div.className = 'suggestion-item'; div.innerHTML = `📍 ${item.display_name}`;
+                    div.onclick = () => { document.getElementById('search-input').value = item.display_name.split('(')[0].trim(); moveToLocation(item.lat, item.lon, item.display_name); list.style.display = 'none'; };
+                    list.appendChild(div);
                 });
-
-                const matches = scored
-                    .filter(x => x.score > 0)
-                    .sort((a, b) => b.score - a.score)
-                    .slice(0, 10)
-                    .map(x => x.item);
-
-                renderSuggestions(matches);
+                list.style.display = 'block';
             };
         }, 300);
     }
 
-    function renderSuggestions(items) {
-        const list = document.getElementById('search-suggestions');
-        list.innerHTML = '';
-        if (items.length === 0) {
-            list.style.display = 'none';
-            return;
-        }
-        items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'suggestion-item';
-            div.innerHTML = `📍 ${item.display_name}`;
-            div.onclick = () => {
-                document.getElementById('search-input').value = item.display_name.split('(')[0].trim();
-                moveToLocation(item.lat, item.lon, item.display_name);
-                list.style.display = 'none';
-                updateStatus(`Вибрано: ${item.display_name}`);
-            };
-            list.appendChild(div);
-        });
-        list.style.display = 'block';
-    }
-
-    function handleSearchEnter(e) { if(e.key === 'Enter') doSearch(); }
-
     function doSearch() {
-        const query = document.getElementById('search-input').value.trim().toLowerCase();
-        if(!query) return;
-        
-        document.getElementById('search-suggestions').style.display = 'none';
-        updateStatus(`Шукаю "${query}"...`);
-
-        const tx = db.transaction("search_cache", "readonly");
-        const store = tx.objectStore("search_cache");
-        const req = store.get(query);
-
-        req.onsuccess = (e) => {
-            const res = e.target.result;
-            if (res) {
-                moveToLocation(res.lat, res.lon, res.display_name);
-                updateStatus(`Знайдено в пам'яті: ${query}`);
-            } else {
-                if (isOfflineOnly) {
-                    alert(`"${query}" не знайдено. Перевірте список підказок.`);
-                } else {
-                    searchOnline(query);
-                }
-            }
+        const q = document.getElementById('search-input').value.trim().toLowerCase();
+        db.transaction("search_cache", "readonly").objectStore("search_cache").get(q).onsuccess = e => {
+            if (e.target.result) moveToLocation(e.target.result.lat, e.target.result.lon, e.target.result.display_name);
+            else if (!isOfflineOnly) searchOnline(q);
         };
     }
 
     async function searchOnline(query) {
-        try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-
-            if (data && data.length > 0) {
-                const best = data[0];
-                const lat = parseFloat(best.lat);
-                const lon = parseFloat(best.lon);
-                const name = best.display_name;
-                moveToLocation(lat, lon, name);
-                updateStatus(`Знайдено онлайн: ${name}`);
-                const tx = db.transaction("search_cache", "readwrite");
-                tx.objectStore("search_cache").put({ query: query, lat: lat, lon: lon, display_name: name });
-            } else {
-                alert("Місце не знайдено.");
-            }
-        } catch (e) { updateStatus("Помилка пошуку."); }
-    }
-
-    function moveToLocation(lat, lng, text) {
-        map.setView([lat, lng], 15);
-        L.popup().setLatLng([lat, lng]).setContent(text).openOn(map);
-    }
-
-    // --- ROUTING ---
-    function toggleRouteMode() {
-        isRoutingMode = !isRoutingMode;
-        const btn = document.getElementById('btn-route');
-        if (isRoutingMode) {
-            btn.classList.add('routing-active');
-            updateStatus("РЕЖИМ МАРШРУТУ: Оберіть ПОЧАТОК.");
-            if (routeLayer) map.removeLayer(routeLayer);
-            routeMarkers.forEach(m => map.removeLayer(m));
-            routeMarkers = []; routePoints = [];
-        } else {
-            btn.classList.remove('routing-active');
-            updateStatus("Режим маршруту вимкнено.");
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const d = await r.json();
+        if (d?.[0]) {
+            moveToLocation(d[0].lat, d[0].lon, d[0].display_name);
+            db.transaction("search_cache", "readwrite").objectStore("search_cache").put({ query, lat: d[0].lat, lon: d[0].lon, display_name: d[0].display_name });
         }
+    }
+
+    function toggleRouteMode() {
+        isRoutingMode = !isRoutingMode; const btn = document.getElementById('btn-route');
+        if (isRoutingMode) { btn.classList.add('routing-active'); routeMarkers.forEach(m => map.removeLayer(m)); routePoints = []; updateStatus("Оберіть 2 точки на мапі"); }
+        else { btn.classList.remove('routing-active'); updateStatus("Режим маршруту вимкнено"); }
     }
 
     function onMapClick(e) {
         if (!isRoutingMode) return;
-        const latlng = e.latlng;
-        routePoints.push(latlng);
-        const marker = L.marker(latlng).addTo(map);
-        routeMarkers.push(marker);
-        if (routePoints.length === 1) updateStatus("Початок є. Оберіть КІНЕЦЬ.");
-        else if (routePoints.length === 2) {
-            updateStatus("Розрахунок...");
-            calculateRoute(routePoints[0], routePoints[1]);
-            toggleRouteMode(); 
-        }
+        routePoints.push(e.latlng); routeMarkers.push(L.marker(e.latlng).addTo(map));
+        if (routePoints.length === 2) { calculateRoute(routePoints[0], routePoints[1]); toggleRouteMode(); }
     }
 
-    async function calculateRoute(start, end) {
-        const key = `${start.lat.toFixed(3)},${start.lng.toFixed(3)}_${end.lat.toFixed(3)},${end.lng.toFixed(3)}`;
-        const tx = db.transaction("routes_cache", "readonly");
-        const store = tx.objectStore("routes_cache");
-        const req = store.get(key);
-        req.onsuccess = async (e) => {
-            if (e.target.result) drawRoute(e.target.result.geometry, "Офлайн (з кешу)");
-            else {
-                if (isOfflineOnly) alert("Маршрут не знайдено в пам'яті.");
-                else await fetchRouteOnline(start, end, key);
-            }
+    async function calculateRoute(s, end) {
+        const key = `${s.lat.toFixed(3)},${s.lng.toFixed(3)}_${end.lat.toFixed(3)},${end.lng.toFixed(3)}`;
+        db.transaction("routes_cache", "readonly").objectStore("routes_cache").get(key).onsuccess = async e => {
+            if (e.target.result) drawRoute(e.target.result.geometry, "Офлайн");
+            else if (!isOfflineOnly) {
+                updateStatus("Пошук маршруту онлайн...");
+                try {
+                    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${s.lng},${s.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
+                    const d = await r.json();
+                    if (d.routes?.[0]) {
+                        const geo = d.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                        drawRoute(geo, `${(d.routes[0].distance/1000).toFixed(1)} км`);
+                        db.transaction("routes_cache", "readwrite").objectStore("routes_cache").put({ key, geometry: geo });
+                    }
+                } catch(e) { updateStatus("Помилка маршруту."); }
+            } else { updateStatus("Маршрут не збережено."); }
         };
     }
 
-    async function fetchRouteOnline(start, end, key) {
-        try {
-            const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error("API Error");
-            const data = await resp.json();
-            if (data.routes && data.routes.length > 0) {
-                const geo = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                const dist = (data.routes[0].distance / 1000).toFixed(1);
-                drawRoute(geo, `${dist} км`);
-                const tx = db.transaction("routes_cache", "readwrite");
-                tx.objectStore("routes_cache").put({ key: key, geometry: geo, distance: dist });
-            } else alert("Маршрут не знайдено.");
-        } catch (e) { updateStatus("Помилка маршруту: " + e.message); }
-    }
-
-    function drawRoute(latlngs, label) {
-        if (routeLayer) map.removeLayer(routeLayer);
-        routeLayer = L.polyline(latlngs, { color: 'blue', weight: 5, opacity: 0.7 }).addTo(map);
-        map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
-        updateStatus(`Маршрут: ${label}`);
-    }
-
-    // --- CUSTOM IMAGE ---
-    function getTileFromCustomImage(coords) {
-        const tb = tileLayer._tileCoordsToBounds(coords);
-        if (!customMapBounds.intersects(tb)) return null;
-        const z = coords.z;
-        const p1 = map.project(customMapBounds.getNorthWest(), z);
-        const p2 = map.project(customMapBounds.getSouthEast(), z);
-        const tp = L.point(coords.x * 256, coords.y * 256);
-        const cw = document.createElement('canvas');
-        cw.width = 256; cw.height = 256;
-        const ctx = cw.getContext('2d');
-        const sx = customMapImage.naturalWidth / (p2.x - p1.x);
-        const sy = customMapImage.naturalHeight / (p2.y - p1.y);
-        try {
-            ctx.drawImage(customMapImage, (tp.x - p1.x)*sx, (tp.y - p1.y)*sy, 256*sx, 256*sy, 0, 0, 256, 256);
-            return cw.toDataURL('image/png');
-        } catch(e) { return null; }
-    }
-
-    function toggleMode() {
-        isOfflineOnly = document.getElementById('mode-toggle').checked;
-        document.body.style.backgroundColor = isOfflineOnly ? "#e0e0e0" : "#fff";
-        document.getElementById('btn-download').disabled = isOfflineOnly;
-        
-        // If user manually toggles, reset the auto-switch timer so it doesn't immediately flip back
-        noConnectionStart = 0;
-        
-        tileLayer.redraw();
-        updateStatus(isOfflineOnly ? "РЕЖИМ ОФЛАЙН" : "РЕЖИМ ОНЛАЙН");
-    }
-
-    function handleImageUpload(input) {
-        if (input.files && input.files[0]) {
-            const r = new FileReader();
-            r.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    customMapImage = img;
-                    const c = map.getCenter();
-                    const z = map.getZoom();
-                    const s = map.getSize();
-                    const sc = Math.min(s.x / img.naturalWidth, s.y / img.naturalHeight) * 0.9;
-                    const w = img.naturalWidth * sc / 2;
-                    const h = img.naturalHeight * sc / 2;
-                    const cp = map.project(c, z);
-                    customMapBounds = L.latLngBounds(map.unproject(L.point(cp.x-w, cp.y-h), z), map.unproject(L.point(cp.x+w, cp.y+h), z));
-                    isCustomImageMode = true;
-                    document.getElementById('btn-img-upload').style.display = 'none';
-                    document.getElementById('btn-img-close').style.display = 'inline-block';
-                    tileLayer.redraw();
-                };
-                img.src = e.target.result;
-            }
-            r.readAsDataURL(input.files[0]);
+    function drawRoute(g, l) { if (routeLayer) map.removeLayer(routeLayer); routeLayer = L.polyline(g, { color: 'blue', weight: 5 }).addTo(map); map.fitBounds(routeLayer.getBounds()); updateStatus(`Маршрут: ${l}`); }
+    
+    function toggleMode() { 
+        // Only allow manual toggle if NOT in custom image mode
+        if (isCustomImageMode) {
+            updateStatus("Спершу закрийте фото-мапу");
+            document.getElementById('mode-toggle').checked = true; // force keep checked
+            return;
         }
+        isOfflineOnly = document.getElementById('mode-toggle').checked; 
+        document.getElementById('btn-download').disabled = isOfflineOnly; 
+        document.getElementById('mode-text').innerText = isOfflineOnly ? "Офлайн" : "Авто";
+        tileLayer.redraw(); 
     }
-
-    function closeImageMap() {
-        isCustomImageMode = false;
-        document.getElementById('btn-img-upload').style.display = 'inline-block';
-        document.getElementById('btn-img-close').style.display = 'none';
-        tileLayer.redraw();
+    
+    function checkLocation() { navigator.geolocation.getCurrentPosition(p => moveToLocation(p.coords.latitude, p.coords.longitude, "Ви тут")); }
+    function moveToLocation(lat, lng, t) { map.setView([lat, lng], 15); L.popup().setLatLng([lat, lng]).setContent(t).openOn(map); }
+    function saveBlob(b, n) { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = n; a.click(); }
+    function clearData() { if(confirm("Очистити всі офлайн дані?")) { db.transaction("tiles", "readwrite").objectStore("tiles").clear(); db.transaction("search_cache", "readwrite").objectStore("search_cache").clear(); location.reload(); } }
+    function updateStatus(m) { 
+        const sb = document.getElementById('status-bar');
+        sb.innerText = m; 
+        sb.style.opacity = '1';
+        setTimeout(() => { sb.style.opacity = '0.7'; }, 2000);
     }
-
-    function checkLocation() {
-        if (!navigator.geolocation) return alert("Не підтримується.");
-        navigator.geolocation.getCurrentPosition(
-            (pos) => moveToLocation(pos.coords.latitude, pos.coords.longitude, "Ви тут"),
-            () => alert("Помилка геолокації")
-        );
-    }
-
-    // --- ROBUST METADATA DOWNLOADER ---
-    async function downloadPlacesMetadata(bounds) {
-        updateStatus("Індексація ВСІХ назв (це може зайняти хвилину)...");
-        const s = bounds.getSouth() - 0.005;
-        const w = bounds.getWest() - 0.005;
-        const n = bounds.getNorth() + 0.005;
-        const e = bounds.getEast() + 0.005;
-        
-        const query = `
-            [out:json][timeout:90];
-            (
-              nwr["name"](${s},${w},${n},${e});
-              nwr["name:uk"](${s},${w},${n},${e});
-              nwr["name:en"](${s},${w},${n},${e});
-            );
-            out center;
-        `;
-        
-        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-        
-        try {
-            const resp = await fetch(url);
-            if(!resp.ok) throw new Error("Overpass API Error " + resp.status);
-            const data = await resp.json();
-            
-            const tx = db.transaction("search_cache", "readwrite");
-            const store = tx.objectStore("search_cache");
-            let count = 0;
-            
-            for(const el of data.elements) {
-                let lat = el.lat;
-                let lon = el.lon;
-                if (!lat && el.center) { lat = el.center.lat; lon = el.center.lon; }
-                if (!lat || !lon) continue;
-
-                const names = new Set();
-                const tags = el.tags || {};
-                
-                if (tags.name) names.add(tags.name);
-                if (tags['name:uk']) names.add(tags['name:uk']);
-                if (tags['name:en']) names.add(tags['name:en']);
-                if (tags.official_name) names.add(tags.official_name);
-                if (tags.alt_name) names.add(tags.alt_name);
-
-                names.forEach(name => {
-                    const cleanName = name.toLowerCase();
-                    store.put({
-                        query: cleanName, 
-                        lat: lat, 
-                        lon: lon, 
-                        display_name: (tags.name || name) + " (Офлайн)" 
-                    });
-                });
-                if(names.size > 0) count++;
-            }
-            console.log(`Indexed ${count} objects for offline search.`);
-            return count;
-        } catch(e) {
-            console.warn("Metadata error:", e);
-            updateStatus("Помилка завантаження назв: " + e.message);
-            await new Promise(r => setTimeout(r, 2000));
-            return 0;
-        }
-    }
-
-    async function startDownload() {
-        const btn = document.getElementById('btn-download');
-        btn.disabled = true;
-        const b = map.getBounds();
-        
-        const count = await downloadPlacesMetadata(b);
-        updateStatus(`Проіндексовано ${count} об'єктів. Завантаження карти...`);
-
-        const minZ = 0, maxZ = 18;
-        let queue = [];
-        for (let z = minZ; z <= maxZ; z++) {
-             const y1 = lat2tile(b.getNorth(), z), y2 = lat2tile(b.getSouth(), z);
-             const x1 = long2tile(b.getWest(), z), x2 = long2tile(b.getEast(), z);
-             for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) queue.push({z, x, y});
-        }
-
-        const total = queue.length;
-        if(total > 5000) {
-            btn.disabled = false;
-            return alert("Завелика зона (>5000 тайлів). Наблизьте карту.");
-        }
-
-        let saved = 0;
-        const startTime = Date.now();
-
-        for (let i = 0; i < total; i++) {
-            const item = queue[i];
-            const elapsed = Date.now() - startTime;
-            const processed = i + 1;
-            const remaining = total - processed;
-            let timeStr = "...";
-            if (processed > 5) {
-                const avgMs = elapsed / processed;
-                const leftSeconds = (avgMs * remaining) / 1000;
-                const roundedSec = Math.ceil(leftSeconds / 30) * 30;
-                const m = Math.floor(roundedSec / 60);
-                const s = roundedSec % 60;
-                timeStr = `~${m},${s === 0 ? '00' : '30'} хв`;
-            }
-
-            updateStatus(`Завантаження карти ${saved+1}/${total} (Зум ${item.z})... Час: ${timeStr}`);
-            
-            try {
-                const r = await fetch(`https://tile.openstreetmap.org/${item.z}/${item.x}/${item.y}.png`);
-                if(r.ok) {
-                    const blob = await r.blob();
-                    db.transaction("tiles", "readwrite").objectStore("tiles").put({ key: `${item.z}_${item.x}_${item.y}`, blob: blob });
-                    saved++;
-                }
-            } catch(e) {}
-            await new Promise(r => setTimeout(r, 20));
-        }
-
-        btn.disabled = false;
-        updateStatus(`Готово! Карти та пошук (${count} місць) збережено.`);
-        tileLayer.redraw();
-    }
-
-    function clearData() {
-        if(!confirm("Видалити все (Карти, пошук, маршрути)?")) return;
-        db.transaction("tiles", "readwrite").objectStore("tiles").clear();
-        db.transaction("search_cache", "readwrite").objectStore("search_cache").clear();
-        db.transaction("routes_cache", "readwrite").objectStore("routes_cache").clear();
-        updateStatus("Все очищено.");
-        tileLayer.redraw();
-    }
-
-    function updateStatus(msg) { document.getElementById('status-bar').innerText = msg; }
-    function long2tile(lon,zoom) { return (Math.floor((lon+180)/360*Math.pow(2,zoom))); }
-    function lat2tile(lat,zoom)  { return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom))); }
-
+    function handleSearchEnter(e) { if(e.key === 'Enter') doSearch(); }
+    function long2tile(l,z) { return Math.floor((l+180)/360*Math.pow(2,z)); }
+    function lat2tile(l,z)  { return Math.floor((1-Math.log(Math.tan(l*Math.PI/180) + 1/Math.cos(l*Math.PI/180))/Math.PI)/2 *Math.pow(2,z)); }
+    
     boot();
 </script>
 </body>
